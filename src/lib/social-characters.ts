@@ -301,6 +301,28 @@ export const SOCIAL_CHARACTERS: SocialCharacter[] = [
     description: "Challenges weak composition and protects the visual standard. Use as a rival critic whose demands reveal the craft beneath the spectacle.",
     teal: true,
   },
+  {
+    id: "delta-drill",
+    role: "COMMUNITY BUILDER",
+    name: "Delta Drill",
+    platforms: ["DISCORD", "TWITTER / X"],
+    description: "Builds strong community connections through authentic engagement and shared experiences. Fosters inclusive spaces where every voice matters.",
+  },
+  {
+    id: "mr-turner",
+    role: "STORYTELLER",
+    name: "Mr. Turner",
+    platforms: ["MEDIUM", "PODCAST"],
+    description: "Crafts compelling narratives that bridge generational gaps and cultural experiences. Uses personal stories to create deeper understanding and connection.",
+    teal: true,
+  },
+  {
+    id: "zupa-novaclutch",
+    role: "INNOVATION CATALYST",
+    name: "Zupa Novaclutch",
+    platforms: ["LINKEDIN", "REELS"],
+    description: "Sparks creative thinking and forward-looking solutions in community projects. Combines traditional wisdom with modern approaches to drive meaningful change.",
+  },
 ];
 
 export function getCharacterById(id: string): SocialCharacter | undefined {
