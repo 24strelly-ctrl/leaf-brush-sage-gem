@@ -10,12 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CharacterDatabaseRouteImport } from './routes/character-database'
 import { Route as ContentCalendarRouteImport } from './routes/content-calendar'
+import { Route as IntegratedDashboardRouteImport } from './routes/integrated-dashboard'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as SocialTemplatesRouteImport } from './routes/social-templates'
+import { Route as TzuHierarchyRouteImport } from './routes/tzu-hierarchy'
+import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
+import { Route as ApiCharactersRouteImport } from './routes/api/characters'
+import { Route as ApiContentCalendarRouteImport } from './routes/api/content-calendar'
+import { Route as ApiEngagementRouteImport } from './routes/api/engagement'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CharacterDatabaseRoute = CharacterDatabaseRouteImport.update({
+  id: '/character-database',
+  path: '/character-database',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContentCalendarRoute = ContentCalendarRouteImport.update({
@@ -23,40 +36,141 @@ const ContentCalendarRoute = ContentCalendarRouteImport.update({
   path: '/content-calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegratedDashboardRoute = IntegratedDashboardRouteImport.update({
+  id: '/integrated-dashboard',
+  path: '/integrated-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SocialTemplatesRoute = SocialTemplatesRouteImport.update({
   id: '/social-templates',
   path: '/social-templates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TzuHierarchyRoute = TzuHierarchyRouteImport.update({
+  id: '/tzu-hierarchy',
+  path: '/tzu-hierarchy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
+  id: '/api/analytics',
+  path: '/api/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCharactersRoute = ApiCharactersRouteImport.update({
+  id: '/api/characters',
+  path: '/api/characters',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContentCalendarRoute = ApiContentCalendarRouteImport.update({
+  id: '/api/content-calendar',
+  path: '/api/content-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEngagementRoute = ApiEngagementRouteImport.update({
+  id: '/api/engagement',
+  path: '/api/engagement',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/character-database': typeof CharacterDatabaseRoute
   '/content-calendar': typeof ContentCalendarRoute
+  '/integrated-dashboard': typeof IntegratedDashboardRoute
+  '/pricing': typeof PricingRoute
   '/social-templates': typeof SocialTemplatesRoute
+  '/tzu-hierarchy': typeof TzuHierarchyRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/characters': typeof ApiCharactersRoute
+  '/api/content-calendar': typeof ApiContentCalendarRoute
+  '/api/engagement': typeof ApiEngagementRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/character-database': typeof CharacterDatabaseRoute
   '/content-calendar': typeof ContentCalendarRoute
+  '/integrated-dashboard': typeof IntegratedDashboardRoute
+  '/pricing': typeof PricingRoute
   '/social-templates': typeof SocialTemplatesRoute
+  '/tzu-hierarchy': typeof TzuHierarchyRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/characters': typeof ApiCharactersRoute
+  '/api/content-calendar': typeof ApiContentCalendarRoute
+  '/api/engagement': typeof ApiEngagementRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/character-database': typeof CharacterDatabaseRoute
   '/content-calendar': typeof ContentCalendarRoute
+  '/integrated-dashboard': typeof IntegratedDashboardRoute
+  '/pricing': typeof PricingRoute
   '/social-templates': typeof SocialTemplatesRoute
+  '/tzu-hierarchy': typeof TzuHierarchyRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/characters': typeof ApiCharactersRoute
+  '/api/content-calendar': typeof ApiContentCalendarRoute
+  '/api/engagement': typeof ApiEngagementRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/content-calendar' | '/social-templates'
+  fullPaths:
+    | '/'
+    | '/character-database'
+    | '/content-calendar'
+    | '/integrated-dashboard'
+    | '/pricing'
+    | '/social-templates'
+    | '/tzu-hierarchy'
+    | '/api/analytics'
+    | '/api/characters'
+    | '/api/content-calendar'
+    | '/api/engagement'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/content-calendar' | '/social-templates'
-  id: '__root__' | '/' | '/content-calendar' | '/social-templates'
+  to:
+    | '/'
+    | '/character-database'
+    | '/content-calendar'
+    | '/integrated-dashboard'
+    | '/pricing'
+    | '/social-templates'
+    | '/tzu-hierarchy'
+    | '/api/analytics'
+    | '/api/characters'
+    | '/api/content-calendar'
+    | '/api/engagement'
+  id:
+    | '__root__'
+    | '/'
+    | '/character-database'
+    | '/content-calendar'
+    | '/integrated-dashboard'
+    | '/pricing'
+    | '/social-templates'
+    | '/tzu-hierarchy'
+    | '/api/analytics'
+    | '/api/characters'
+    | '/api/content-calendar'
+    | '/api/engagement'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CharacterDatabaseRoute: typeof CharacterDatabaseRoute
   ContentCalendarRoute: typeof ContentCalendarRoute
+  IntegratedDashboardRoute: typeof IntegratedDashboardRoute
+  PricingRoute: typeof PricingRoute
   SocialTemplatesRoute: typeof SocialTemplatesRoute
+  TzuHierarchyRoute: typeof TzuHierarchyRoute
+  ApiAnalyticsRoute: typeof ApiAnalyticsRoute
+  ApiCharactersRoute: typeof ApiCharactersRoute
+  ApiContentCalendarRoute: typeof ApiContentCalendarRoute
+  ApiEngagementRoute: typeof ApiEngagementRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +182,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/character-database': {
+      id: '/character-database'
+      path: '/character-database'
+      fullPath: '/character-database'
+      preLoaderRoute: typeof CharacterDatabaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/content-calendar': {
       id: '/content-calendar'
       path: '/content-calendar'
       fullPath: '/content-calendar'
       preLoaderRoute: typeof ContentCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrated-dashboard': {
+      id: '/integrated-dashboard'
+      path: '/integrated-dashboard'
+      fullPath: '/integrated-dashboard'
+      preLoaderRoute: typeof IntegratedDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/social-templates': {
@@ -82,13 +217,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SocialTemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tzu-hierarchy': {
+      id: '/tzu-hierarchy'
+      path: '/tzu-hierarchy'
+      fullPath: '/tzu-hierarchy'
+      preLoaderRoute: typeof TzuHierarchyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/analytics': {
+      id: '/api/analytics'
+      path: '/api/analytics'
+      fullPath: '/api/analytics'
+      preLoaderRoute: typeof ApiAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/characters': {
+      id: '/api/characters'
+      path: '/api/characters'
+      fullPath: '/api/characters'
+      preLoaderRoute: typeof ApiCharactersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/content-calendar': {
+      id: '/api/content-calendar'
+      path: '/api/content-calendar'
+      fullPath: '/api/content-calendar'
+      preLoaderRoute: typeof ApiContentCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/engagement': {
+      id: '/api/engagement'
+      path: '/api/engagement'
+      fullPath: '/api/engagement'
+      preLoaderRoute: typeof ApiEngagementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CharacterDatabaseRoute: CharacterDatabaseRoute,
   ContentCalendarRoute: ContentCalendarRoute,
+  IntegratedDashboardRoute: IntegratedDashboardRoute,
+  PricingRoute: PricingRoute,
   SocialTemplatesRoute: SocialTemplatesRoute,
+  TzuHierarchyRoute: TzuHierarchyRoute,
+  ApiAnalyticsRoute: ApiAnalyticsRoute,
+  ApiCharactersRoute: ApiCharactersRoute,
+  ApiContentCalendarRoute: ApiContentCalendarRoute,
+  ApiEngagementRoute: ApiEngagementRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

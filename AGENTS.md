@@ -349,3 +349,42 @@ auth/db: OFF by default — sign-in, @/lib/db or migrations ONLY on an accounts 
 never:   build an app for a greeting/number/question; invent imagine_* calls;
          ask the user to run commands; delete or abandon /workspace/startup.sh
 ```
+
+---
+
+## Cleanup and maintenance
+
+### Directory cleanup
+
+The project includes a Python cleanup script (`scripts/cleanup.py`) for removing build artifacts, temporary files, and other unnecessary files. Configuration is in `cleanup-config.json`.
+
+**Available npm scripts:**
+
+- `npm run cleanup:report` — Preview what would be cleaned (dry run, safe)
+- `npm run cleanup:archive` — Move files to `cleanup_archive/` directory
+- `npm run cleanup:delete` — Permanently delete files (use with caution)
+- `npm run cleanup:vercel` — Delete cleanup targets + remove `.vercel/output`
+
+**Protected patterns (never deleted):**
+- `.git`, `.env`, credentials, secrets, keys, certificates
+- Source directories: `src/`, `server/`, `scripts/`, `public/`
+- Config files: `package.json`, `tsconfig.json`, `vite.config.ts`, `vercel.json`
+- Documentation: `AGENTS.md`, `GO_LIVE_GUIDE.md`, `DATABASE_SETUP.md`
+- `node_modules`, `archives/`, `migrations/`
+
+**Build artifacts (safe to delete):**
+- `.vercel/output`, `.next`, `dist`, `build`, `target`
+- `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`
+- `*.pyc`, `*.pyo`, `.eggs`, `*.egg-info`
+- `.idea`, `.vscode`, `tsconfig.tsbuildinfo`
+
+**Temporary files (safe to delete):**
+- `*.tmp`, `*.temp`, `*.swp`, `*.swo`, `*~`
+- `.DS_Store`, `Thumbs.db`, `._*`
+- System folders: `.Spotlight-V100`, `.Trashes`, `.fseventsd`
+
+**Log files (archived by default):**
+- `*.log`, `*.log.*`, `logs/`, `*.out`, `*.err`
+- `hs_err_pid*.log`, `system.log`, `crush.log`
+
+Run `npm run cleanup:report` before any destructive action to review what will be affected.

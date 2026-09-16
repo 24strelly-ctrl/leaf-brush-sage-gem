@@ -1,8 +1,8 @@
 #!/bin/bash
-# Startup script for Gilded Mirrors project
-# Uses Node v22.23.1 to avoid compatibility issues with v26.5.0
+# Startup script for Eternity Calls project
+# Uses Node v20.20.2 for system consistency
 
-export PATH="/Users/jypsee72/.nvm/versions/node/v22.23.1/bin:$PATH"
+export PATH="/Users/jypsee72/.nvm/versions/node/v20.20.2/bin:$PATH"
 
 # Check if dev server is already running
 if curl -s http://127.0.0.1:8080 > /dev/null 2>&1; then
@@ -11,8 +11,8 @@ if curl -s http://127.0.0.1:8080 > /dev/null 2>&1; then
 fi
 
 # Start the dev server
-echo "Starting dev server with Node v22.23.1..."
-cd "/Users/jypsee72/Desktop/Private & Shared"
+echo "Starting dev server with Node v20.20.2..."
+cd "/Users/jypsee72/Desktop/Eternity_Calls/Private & Shared"
 npm run dev &
 
 # Wait for server to be ready

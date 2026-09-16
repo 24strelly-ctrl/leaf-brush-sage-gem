@@ -1,7 +1,7 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
 
 /** Which database backend is active. */
-export type DbSource = "neon" | "pglite";
+export type DbSource = "neon" | "pglite" | "sqlite" | "supabase";
 
 // An empty/whitespace DATABASE_URL (an easy misconfig in deploy UIs) must mean
 // "unset" — otherwise production would silently run on the PGLite fallback.
@@ -10,17 +10,44 @@ const rawDatabaseUrl =
 const databaseUrl =
   rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
 
-/**
- * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
- * sandbox), otherwise a local embedded **PGLite** (Postgres compiled to WASM) so
- * the app has a working database even with nothing configured — the live preview
- * included. Swap in Neon later by just setting `DATABASE_URL`; no code changes.
- */
-export const dbSource: DbSource = databaseUrl ? "neon" : "pglite";
+const rawSqlitePath =
+  typeof process !== "undefined" ? process.env.SQLITE_PATH : undefined;
+const sqlitePath =
+  rawSqlitePath && rawSqlitePath.trim() ? rawSqlitePath : undefined;
+
+const rawSupabaseUrl =
+  typeof process !== "undefined" ? process.env.SUPABASE_URL : undefined;
+const supabaseUrl =
+  rawSupabaseUrl && rawSupabaseUrl.trim() ? rawSupabaseUrl : undefined;
+
+const rawSupabaseAnonKey =
+  typeof process !== "undefined" ? process.env.SUPABASE_ANON_KEY : undefined;
+const supabaseAnonKey =
+  rawSupabaseAnonKey && rawSupabaseAnonKey.trim() ? rawSupabaseAnonKey : undefined;
+
+const rawSupabaseServiceKey =
+  typeof process !== "undefined" ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined;
+const supabaseServiceKey =
+  rawSupabaseServiceKey && rawSupabaseServiceKey.trim() ? rawSupabaseServiceKey : undefined;
 
 /**
- * Minimal shared SQL surface, satisfied by both Neon and PGLite. Both the
- * tagged-template and `.query()` forms resolve to an array of row objects:
+ * Active backend selection based on environment variables:
+ * - **Supabase** when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set
+ * - **Neon** when `DATABASE_URL` is set (deployed / configured sandbox)
+ * - **SQLite** when `SQLITE_PATH` is set (local SQLite file)
+ * - **PGLite** fallback (Postgres compiled to WASM) for preview/no config
+ */
+export const dbSource: DbSource = supabaseUrl && supabaseAnonKey
+  ? "supabase"
+  : databaseUrl
+    ? "neon"
+    : sqlitePath
+      ? "sqlite"
+      : "pglite";
+
+/**
+ * Minimal shared SQL surface, satisfied by Neon, PGLite, SQLite, and Supabase.
+ * Both the tagged-template and `.query()` forms resolve to an array of row objects:
  *
  *   const sql = await getSql();
  *   const rows = await sql`select * from todos where id = ${id}`; // parameterized
@@ -48,6 +75,8 @@ const globalRef = globalThis as typeof globalThis & {
   __pgSqlPromise__?: Promise<Sql>;
   __pgliteInstance__?: Promise<import("@electric-sql/pglite").PGlite>;
   __pgliteMigrateChain__?: Promise<void>;
+  __sqliteInstance__?: Promise<any>;
+  __sqliteMigrateChain__?: Promise<void>;
 };
 
 /**
@@ -88,12 +117,24 @@ function toSql(run: Run): Sql {
 function createNeonSql(): Promise<Sql> {
   globalRef.__pgSqlPromise__ ??= (async () => {
     // Regular Postgres driver: node-postgres (`pg`) — works directly with Neon's
-    // pooled endpoint. One pool per process; warm serverless instances reuse it.
+    // pooled endpoint and Supabase. One pool per process; warm serverless instances reuse it.
     const { Pool, types } = await import("pg");
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({ connectionString: databaseUrl });
+    
+    // Use Supabase connection if available, otherwise fall back to DATABASE_URL
+    const connectionString = dbSource === "supabase" 
+      ? `${supabaseUrl}?pgbouncer=true` // Use connection pooling for Supabase
+      : databaseUrl;
+    
+    const pool = new Pool({ 
+      connectionString,
+      // For Supabase, use service role key for server-side operations
+      ...(dbSource === "supabase" && supabaseServiceKey ? {
+        password: supabaseServiceKey
+      } : {})
+    });
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
@@ -167,6 +208,100 @@ async function createPgliteSql(): Promise<Sql> {
   });
 }
 
+async function createSqliteSql(): Promise<Sql> {
+  // SQLite database using better-sqlite3 for local file-based storage.
+  // Converts Postgres SQL to SQLite syntax where needed.
+  globalRef.__sqliteInstance__ ??= (async () => {
+    const Database = await import("better-sqlite3");
+    const db = new Database.default(sqlitePath || ":memory:");
+    
+    // Enable WAL mode for better concurrency
+    db.pragma("journal_mode = WAL");
+    
+    // Create migrations table
+    db.exec(
+      "create table if not exists _migrations (name text primary key, applied_at text not null default current_timestamp)"
+    );
+    return db;
+  })().catch((err) => {
+    globalRef.__sqliteInstance__ = undefined;
+    throw err;
+  });
+  const db = await globalRef.__sqliteInstance__;
+
+  // Apply migrations with Postgres to SQLite syntax conversion
+  const migrate = async (): Promise<void> => {
+    const migrations = import.meta.glob("/migrations/*.sql", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }) as Record<string, string>;
+    
+    const doneRows = db.prepare("select name from _migrations").all() as { name: string }[];
+    const done = doneRows.map((r) => r.name);
+    
+    for (const { name, path } of pendingMigrations(Object.keys(migrations), done)) {
+      const sql = migrations[path];
+      // Convert Postgres syntax to SQLite
+      const sqliteSql = convertPostgresToSQLite(sql);
+      
+      // Apply migration within transaction
+      const applyMigration = db.transaction(() => {
+        db.exec(sqliteSql);
+        db.prepare("insert into _migrations (name) values (?)").run(name);
+      });
+      
+      try {
+        applyMigration();
+      } catch (err) {
+        console.error(`Migration ${name} failed:`, err);
+        throw err;
+      }
+    }
+  };
+  
+  const pass = (globalRef.__sqliteMigrateChain__ ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(migrate);
+  globalRef.__sqliteMigrateChain__ = pass;
+  await pass;
+
+  return toSql(async <T>(text: string, params: unknown[]) => {
+    // Convert Postgres placeholders ($1, $2) to SQLite placeholders (?, ?)
+    const sqliteText = text.replace(/\$(\d+)/g, (_, index) => "?");
+    const stmt = db.prepare(sqliteText);
+    const result = stmt.all(...params) as T[];
+    return result;
+  });
+}
+
+// Simple Postgres to SQLite syntax converter
+function convertPostgresToSQLite(sql: string): string {
+  return sql
+    // Replace Postgres placeholders with SQLite placeholders
+    .replace(/\$(\d+)/g, "?")
+    // Replace Postgres-specific types with SQLite equivalents
+    .replace(/\bserial\b/gi, "integer")
+    .replace(/\bbigserial\b/gi, "integer")
+    .replace(/\btext\b/gi, "text")
+    .replace(/\btimestamptz\b/gi, "text")
+    .replace(/\btimestamp\b/gi, "text")
+    .replace(/\bboolean\b/gi, "integer")
+    .replace(/\bjsonb?\b/gi, "text")
+    .replace(/\buuid\b/gi, "text")
+    // Replace Postgres-specific functions
+    .replace(/\bnow\(\)/gi, "datetime('now')")
+    .replace(/\bcurrent_timestamp\b/gi, "datetime('now')")
+    .replace(/\btrue\b/gi, "1")
+    .replace(/\bfalse\b/gi, "0")
+    // Remove Postgres-specific clauses
+    .replace(/\bdeferrable\b/gi, "")
+    .replace(/\binitially deferred\b/gi, "")
+    .replace(/\bdeferrable initially deferred\b/gi, "")
+    // Handle RETURNING clause (SQLite doesn't support it in the same way)
+    .replace(/\breturning\b.*$/gim, "");
+}
+
 let sqlPromise: Promise<Sql> | null = null;
 
 async function createSql(): Promise<Sql> {
@@ -176,15 +311,30 @@ async function createSql(): Promise<Sql> {
         "or a server route loader, never from client code.",
     );
   }
-  return dbSource === "neon" ? createNeonSql() : createPgliteSql();
+  switch (dbSource) {
+    case "neon":
+      return createNeonSql();
+    case "pglite":
+      return createPgliteSql();
+    case "sqlite":
+      return createSqliteSql();
+    case "supabase":
+      return createNeonSql(); // Supabase uses Postgres protocol
+    default:
+      throw new Error(`Unknown database source: ${dbSource}`);
+  }
 }
 
 /**
- * Get the shared, **server-only** SQL client. Neon when `DATABASE_URL` is set,
- * otherwise the local PGLite fallback. Memoized — safe to call per request.
+ * Get the shared, **server-only** SQL client. Supports multiple backends:
+ * - Supabase when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set
+ * - Neon when `DATABASE_URL` is set
+ * - SQLite when `SQLITE_PATH` is set
+ * - PGLite fallback (embedded Postgres) for preview/no config
+ * Memoized — safe to call per request.
  *
  * Schema comes from `migrations/*.sql`, auto-applied before the first query on
- * both backends — define tables there, never inline in server functions.
+ * all backends — define tables there, never inline in server functions.
  */
 export function getSql(): Promise<Sql> {
   sqlPromise ??= createSql().catch((err) => {
@@ -210,29 +360,47 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
 }
 
 /**
+ * The shared SQLite instance, with `migrations/*.sql` applied.
+ * Lets Better Auth persist to the SAME SQLite database as app data (via a
+ * Kysely dialect). Throws when SQLite is not the active backend.
+ */
+export async function getSqlite(): Promise<any> {
+  if (dbSource !== "sqlite") {
+    throw new Error("getSqlite() is only available when SQLite is the active backend");
+  }
+  await getSql();
+  const db = await globalRef.__sqliteInstance__;
+  if (!db) throw new Error("SQLite instance failed to initialize");
+  return db;
+}
+
+/**
  * Finish DB bootstrap before the server handles traffic.
  *
- * - **PGLite** (preview / no `DATABASE_URL`): open the in-memory DB and apply
+ * - **PGLite** (preview / no config): open the in-memory DB and apply
  *   `migrations/*.sql`. Idempotent — concurrent callers share one promise.
- * - **Neon**: no-op (pool is created lazily on first query).
+ * - **SQLite** (local file): open the SQLite database and apply migrations.
+ * - **Neon/Supabase**: no-op (pool is created lazily on first query).
  *
  * Vite `configureServer` awaits this at dev startup; production imports of this
  * module kick it off immediately (see bottom of file).
  */
 export function ensureDbReady(): Promise<void> {
-  if (dbSource !== "pglite") return Promise.resolve();
-  return getSql().then(() => undefined);
+  if (dbSource === "pglite" || dbSource === "sqlite") {
+    return getSql().then(() => undefined);
+  }
+  return Promise.resolve();
 }
 
-// Server-only eager start: kick PGLite bootstrap as soon as this module loads in
+// Server-only eager start: kick PGLite/SQLite bootstrap as soon as this module loads in
 // Node. Client bundles never hit this path (`getSql` throws in the browser).
 const globalBoot = globalThis as typeof globalThis & {
   __pgBootstrapPromise__?: Promise<void>;
 };
-if (typeof window === "undefined" && dbSource === "pglite") {
+if (typeof window === "undefined" && (dbSource === "pglite" || dbSource === "sqlite")) {
   globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
     globalBoot.__pgBootstrapPromise__ = undefined;
-    console.error("[db] PGLite bootstrap failed:", err);
+    console.error(`[db] ${dbSource} bootstrap failed:`, err);
     throw err;
   });
 }
