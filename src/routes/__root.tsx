@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Gilded Mirrors Originals";
@@ -52,6 +53,7 @@ export const Route = createRootRoute({
           }}
         />
         <Scripts />
+        <Analytics />
       </body>
     </html>
   ),
