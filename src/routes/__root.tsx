@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Gilded Mirrors Originals";
@@ -54,6 +55,7 @@ export const Route = createRootRoute({
         />
         <Scripts />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   ),
